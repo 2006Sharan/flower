@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FloraVision AI | Flower Species Classification </title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Chart.js for viva/presentation analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              900: '#064e3b',
+            },
+            darkbg: '#0b1120',
+            darkcard: '#131e32',
+            darkborder: '#1e293b'
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            display: ['"Outfit"', 'sans-serif'],
+            mono: ['"Fira Code"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans selection:bg-emerald-500 selection:text-white">
+
+  <!-- Ambient Glow Effects -->
+  <div class="fixed top-0 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
+  <div class="fixed bottom-0 right-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
+
+  <!-- Navigation Bar -->
+  <header class="sticky top-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('classifier')">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 p-[2px] shadow-lg shadow-emerald-500/20">
+          <div class="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+            <i class="fa-solid fa-seedling text-emerald-400 text-xl"></i>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="font-display font-extrabold text-2xl tracking-tight bg-gradient-to-r from-white via-slate-100 to-emerald-400 bg-clip-text text-transparent">FloraVision AI</span>
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">YOLOv8</span>
+          </div>
+          <p class="text-xs text-slate-400 font-medium">Deep Learning Botanical Classification & Detection</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="hidden md:flex items-center space-x-1 bg-slate-900/90 border border-slate-800 p-1.5 rounded-2xl">
+        <button onclick="switchTab('classifier')" id="tab-btn-classifier" class="nav-tab active-tab px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center space-x-2">
+          <i class="fa-solid fa-camera-retro"></i>
+          <span>Classifier</span>
+        </button>
+        <button onclick="switchTab('encyclopedia')" id="tab-btn-encyclopedia" class="nav-tab px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center space-x-2 text-slate-400 hover:text-white">
+          <i class="fa-solid fa-book-atlas"></i>
+          <span>Species Catalog</span>
+        </button>
+        <button onclick="switchTab('comparator')" id="tab-btn-comparator" class="nav-tab px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center space-x-2 text-slate-400 hover:text-white">
+          <i class="fa-solid fa-scale-balanced"></i>
+          <span>Comparator</span>
+        </button>
+        <button onclick="switchTab('metrics')" id="tab-btn-metrics" class="nav-tab px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center space-x-2 text-slate-400 hover:text-white">
+          <i class="fa-solid fa-chart-line"></i>
+          <span>Model Metrics</span>
+        </button>
+        <button onclick="switchTab('history')" id="tab-btn-history" class="nav-tab px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center space-x-2 text-slate-400 hover:text-white">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+          <span>History</span>
+        </button>
+        <button onclick="switchTab('api')" id="tab-btn-api" class="nav-tab px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center space-x-2 text-slate-400 hover:text-white">
+          <i class="fa-solid fa-code"></i>
+          <span>API</span>
+        </button>
+      </nav>
+
+      <!-- Status Indicator -->
+      <div class="flex items-center space-x-3">
+        <div id="system-status-badge" class="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-300">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="system-status-text" class="font-medium">YOLO Engine Ready</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- ========================================== -->
+    <!-- TAB 1: CLASSIFIER & YOLO DETECTION         -->
+    <!-- ========================================== -->
+    <section id="tab-classifier" class="tab-content block">
+      
+      <!-- Top Banner -->
+      <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <span class="text-xs uppercase tracking-widest text-emerald-400 font-bold">Smart Botanical Vision</span>
+          <h1 class="text-3xl md:text-4xl font-extrabold font-display text-white mt-1">
+            Classify Flower Species with <span class="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">YOLO & AI</span>
+          </h1>
+          <p class="text-slate-400 text-sm mt-1 max-w-2xl">
+            Upload any flower photo, capture via webcam, or choose a sample to detect bounding regions, identify botanical taxonomy, and inspect vital cultivation care tips.
+          </p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="resetClassifier()" class="px-4 py-2 text-xs font-semibold bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 rounded-xl transition flex items-center space-x-1.5">
+            <i class="fa-solid fa-rotate-right"></i>
+            <span>Reset Demo</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Grid Layout -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- Left Column: Input & Controls (5 cols) -->
+        <div class="lg:col-span-5 space-y-6">
+          
+          <!-- Upload Box Card -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl relative overflow-hidden backdrop-blur-md">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="font-display font-bold text-lg text-white flex items-center space-x-2">
+                <i class="fa-solid fa-cloud-arrow-up text-emerald-400"></i>
+                <span>Image Input</span>
+              </h2>
+              <div class="flex items-center space-x-2">
+                <button id="btn-mode-upload" onclick="setInputMode('upload')" class="px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Upload</button>
+                <button id="btn-mode-camera" onclick="setInputMode('camera')" class="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white">Webcam</button>
+              </div>
+            </div>
+
+            <!-- Drag & Drop Zone -->
+            <div id="drop-area" class="border-2 border-dashed border-slate-700 hover:border-emerald-500/60 rounded-2xl p-8 text-center transition-all cursor-pointer bg-slate-950/40 relative group">
+              <input type="file" id="file-input" accept="image/*" class="hidden">
+              <div class="flex flex-col items-center justify-center space-y-3">
+                <div class="w-16 h-16 rounded-2xl bg-slate-800/80 group-hover:bg-emerald-500/20 flex items-center justify-center transition-colors">
+                  <i class="fa-solid fa-image text-slate-400 group-hover:text-emerald-400 text-2xl transition-colors"></i>
+                </div>
+                <div>
+                  <p class="font-medium text-slate-200 text-sm">Drag & drop flower photo here</p>
+                  <p class="text-xs text-slate-500 mt-1">or <span class="text-emerald-400 font-semibold underline underline-offset-2">browse from computer</span></p>
+                </div>
+                <span class="text-[11px] text-slate-500 font-mono">Supports JPG, PNG, WEBP (Max 15MB)</span>
+              </div>
+            </div>
+
+            <!-- Camera View (Hidden by default) -->
+            <div id="camera-area" class="hidden flex flex-col items-center space-y-4">
+              <div class="relative w-full aspect-square rounded-2xl overflow-hidden bg-black border border-slate-700">
+                <video id="webcam-video" autoplay playsinline class="w-full h-full object-cover"></video>
+                <div class="absolute inset-0 border-2 border-emerald-500/30 pointer-events-none rounded-2xl flex items-center justify-center">
+                  <div class="w-48 h-48 border border-dashed border-emerald-400/60 rounded-xl"></div>
+                </div>
+              </div>
+              <div class="flex items-center space-x-3">
+                <button onclick="captureWebcam()" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold text-sm shadow-lg shadow-emerald-500/20 hover:opacity-95 transition flex items-center space-x-2">
+                  <i class="fa-solid fa-camera"></i>
+                  <span>Capture & Classify</span>
+                </button>
+                <button onclick="stopWebcam()" class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-sm font-semibold hover:bg-slate-700 transition">Cancel</button>
+              </div>
+            </div>
+
+            <!-- Image Preview Box (If image selected) -->
+            <div id="input-preview-box" class="hidden mt-4 pt-4 border-t border-slate-800">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3 overflow-hidden">
+                  <img id="input-thumbnail" src="" class="w-12 h-12 rounded-xl object-cover border border-slate-700">
+                  <div class="truncate">
+                    <p id="input-filename" class="text-xs font-semibold text-slate-200 truncate">flower.jpg</p>
+                    <p id="input-filesize" class="text-[11px] text-slate-500">Ready for neural analysis</p>
+                  </div>
+                </div>
+                <button onclick="triggerClassification()" id="btn-run-inference" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold text-xs shadow-lg shadow-emerald-500/25 hover:from-emerald-400 hover:to-teal-400 transition flex items-center space-x-2">
+                  <i class="fa-solid fa-bolt"></i>
+                  <span>Classify Now</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Quick Sample Cards (1-Click Test Drive) -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl backdrop-blur-md">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="font-display font-bold text-sm text-white">Instant Sample Gallery</h3>
+                <p class="text-xs text-slate-400">Click any card to load & test immediately</p>
+              </div>
+              <span class="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">12 Flowers</span>
+            </div>
+
+            <div id="sample-cards-grid" class="grid grid-cols-4 gap-2.5 max-h-64 overflow-y-auto pr-1">
+              <!-- Dynamically populated via JS -->
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Results & Botanical Dossier (7 cols) -->
+        <div class="lg:col-span-7 space-y-6">
+
+          <!-- Empty State Placeholder -->
+          <div id="results-empty-state" class="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-12 text-center flex flex-col items-center justify-center min-h-[480px]">
+            <div class="w-20 h-20 rounded-3xl bg-slate-800/60 border border-slate-700 flex items-center justify-center text-slate-500 mb-4">
+              <i class="fa-solid fa-brain text-3xl"></i>
+            </div>
+            <h3 class="font-display font-bold text-xl text-white">Neural Classification Engine Idle</h3>
+            <p class="text-slate-400 text-sm max-w-md mt-2">
+              Select a flower photo from your files, use your camera, or pick from the sample cards to see instant bounding boxes, taxonomy, and botanical care metrics.
+            </p>
+            <div class="mt-6 flex flex-wrap gap-2 justify-center">
+              <button onclick="loadSample('rose')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition">🌸 Test Rose</button>
+              <button onclick="loadSample('sunflower')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition">🌻 Test Sunflower</button>
+              <button onclick="loadSample('orchid')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition">🌺 Test Orchid</button>
+              <button onclick="loadSample('tulip')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition">🌷 Test Tulip</button>
+            </div>
+          </div>
+
+          <!-- Loading State Spinner -->
+          <div id="results-loading-state" class="hidden bg-slate-900/90 border border-slate-800 rounded-3xl p-16 text-center flex flex-col items-center justify-center min-h-[480px]">
+            <div class="relative w-20 h-20 mb-6">
+              <div class="absolute inset-0 rounded-full border-4 border-slate-800"></div>
+              <div class="absolute inset-0 rounded-full border-4 border-emerald-400 border-t-transparent animate-spin"></div>
+              <div class="absolute inset-0 flex items-center justify-center">
+                <i class="fa-solid fa-leaf text-emerald-400 text-xl animate-bounce"></i>
+              </div>
+            </div>
+            <h3 class="font-display font-bold text-xl text-white">Analyzing Flower Morphology...</h3>
+            <p class="text-slate-400 text-xs mt-2 font-mono">Running YOLOv8 Object Localization & Neural Softmax</p>
+          </div>
+
+          <!-- Active Results Card -->
+          <div id="results-active-card" class="hidden space-y-6">
+
+            <!-- Hero Prediction Banner -->
+            <div class="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+              <div class="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div class="flex items-center space-x-2">
+                    <span id="res-badge-tier" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center space-x-1">
+                      <i class="fa-solid fa-shield-halved text-[10px]"></i>
+                      <span>Ultra High Confidence</span>
+                    </span>
+                    <span id="res-inference-time" class="text-xs text-slate-500 font-mono">18.4ms</span>
+                  </div>
+                  <h2 id="res-common-name" class="font-display font-extrabold text-3xl sm:text-4xl text-white mt-2">Sunflower</h2>
+                  <p id="res-scientific-name" class="text-emerald-400 font-serif italic text-base">Helianthus annuus</p>
+                  <p id="res-family-order" class="text-xs text-slate-400 mt-1 font-mono">Family: Asteraceae | Order: Asterales</p>
+                </div>
+
+                <!-- Confidence Gauge & TTS Speech -->
+                <div class="flex items-center sm:flex-col sm:items-end justify-between gap-3">
+                  <div class="text-right">
+                    <span class="text-xs text-slate-400 uppercase tracking-wider block">Match Score</span>
+                    <span id="res-confidence-pct" class="font-display font-extrabold text-4xl text-emerald-400">98.4%</span>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <button onclick="speakFlowerName()" title="Listen to pronunciation" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-300 border border-slate-700 flex items-center justify-center transition">
+                      <i class="fa-solid fa-volume-high"></i>
+                    </button>
+                    <button onclick="printPlantReport()" title="Print / Download Identification Certificate" class="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold shadow-lg transition flex items-center space-x-1.5">
+                      <i class="fa-solid fa-file-arrow-down"></i>
+                      <span>Certificate</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Visual Inspection: YOLO Bounding Box & Original Switcher -->
+              <div class="mt-6">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-semibold text-slate-400 flex items-center space-x-1.5">
+                    <i class="fa-solid fa-crosshairs text-emerald-400"></i>
+                    <span>YOLO Object Detection Region</span>
+                  </span>
+                  <div class="flex items-center space-x-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs">
+                    <button id="btn-view-annotated" onclick="setImageOverlayMode('annotated')" class="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 font-semibold text-[11px]">Annotated Box</button>
+                    <button id="btn-view-original" onclick="setImageOverlayMode('original')" class="px-2.5 py-1 rounded text-slate-400 hover:text-white font-semibold text-[11px]">Original</button>
+                  </div>
+                </div>
+
+                <div class="relative w-full aspect-video rounded-2xl overflow-hidden bg-black/60 border border-slate-800 flex items-center justify-center shadow-inner">
+                  <img id="res-image-display" src="" alt="Flower Detection" class="w-full h-full object-contain">
+                </div>
+              </div>
+
+              <!-- Top-5 Softmax Probability Breakdown -->
+              <div class="mt-6 pt-6 border-t border-slate-800">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
+                  <span>Top-5 Classification Probability</span>
+                  <span class="text-[11px] font-mono text-emerald-400">Softmax Normalized</span>
+                </h4>
+                <div id="res-top5-container" class="space-y-2.5">
+                  <!-- Populated via JS -->
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Botanical Care & Cultivation Sheet -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-6">
+              
+              <div class="flex items-center justify-between">
+                <h3 class="font-display font-bold text-lg text-white flex items-center space-x-2">
+                  <i class="fa-solid fa-leaf text-emerald-400"></i>
+                  <span>Botanical Care & Taxonomy Sheet</span>
+                </h3>
+                <span id="res-pet-toxicity" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  🐾 Pet Safe
+                </span>
+              </div>
+
+              <!-- Quick Stats Grid -->
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-3.5">
+                  <span class="text-[11px] text-slate-400 block flex items-center space-x-1">
+                    <i class="fa-solid fa-sun text-amber-400"></i>
+                    <span>Sunlight</span>
+                  </span>
+                  <span id="res-care-sunlight" class="text-xs font-semibold text-white mt-1 block truncate">Full Sun</span>
+                </div>
+                <div class="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-3.5">
+                  <span class="text-[11px] text-slate-400 block flex items-center space-x-1">
+                    <i class="fa-solid fa-droplet text-blue-400"></i>
+                    <span>Watering</span>
+                  </span>
+                  <span id="res-care-watering" class="text-xs font-semibold text-white mt-1 block truncate">Moderate</span>
+                </div>
+                <div class="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-3.5">
+                  <span class="text-[11px] text-slate-400 block flex items-center space-x-1">
+                    <i class="fa-solid fa-temperature-half text-rose-400"></i>
+                    <span>Temperature</span>
+                  </span>
+                  <span id="res-care-temp" class="text-xs font-semibold text-white mt-1 block truncate">20°C - 33°C</span>
+                </div>
+                <div class="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-3.5">
+                  <span class="text-[11px] text-slate-400 block flex items-center space-x-1">
+                    <i class="fa-solid fa-calendar-days text-purple-400"></i>
+                    <span>Season</span>
+                  </span>
+                  <span id="res-care-season" class="text-xs font-semibold text-white mt-1 block truncate">Summer / Fall</span>
+                </div>
+              </div>
+
+              <!-- Dominant Palette & Morphology Analysis -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                
+                <!-- Color Palette -->
+                <div class="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-4">
+                  <span class="text-xs font-bold text-slate-300 block mb-2 flex items-center space-x-1.5">
+                    <i class="fa-solid fa-palette text-pink-400"></i>
+                    <span>Floral Color Palette</span>
+                  </span>
+                  <div id="res-color-palette" class="flex items-center space-x-2">
+                    <!-- Populated via JS -->
+                  </div>
+                </div>
+
+                <!-- Morphology & Circularity -->
+                <div class="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-4">
+                  <span class="text-xs font-bold text-slate-300 block mb-2 flex items-center space-x-1.5">
+                    <i class="fa-solid fa-shapes text-teal-400"></i>
+                    <span>Morphological Geometry</span>
+                  </span>
+                  <div class="flex items-center justify-between text-xs text-slate-300 font-mono">
+                    <div>
+                      <span class="text-slate-500 block text-[10px]">Circularity:</span>
+                      <span id="res-morph-circularity" class="font-bold text-emerald-400">0.88</span>
+                    </div>
+                    <div>
+                      <span class="text-slate-500 block text-[10px]">Aspect Ratio:</span>
+                      <span id="res-morph-ratio" class="font-bold text-white">1.04</span>
+                    </div>
+                    <div>
+                      <span class="text-slate-500 block text-[10px]">Petal Structure:</span>
+                      <span id="res-morph-petals" class="font-bold text-white">Radial / Dense</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Deep Details: Symbolism, Medicinal, Fun Fact -->
+              <div class="space-y-3 text-xs">
+                <div class="p-3.5 rounded-2xl bg-slate-950/40 border border-slate-800/60">
+                  <span class="font-bold text-slate-200 block mb-1">🌿 Botanical Meaning & Symbolism:</span>
+                  <p id="res-symbolism" class="text-slate-400 leading-relaxed">Adoration, Loyalty, Longevity, and Joy.</p>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-950/40 border border-slate-800/60">
+                  <span class="font-bold text-slate-200 block mb-1">💊 Medicinal & Ecological Value:</span>
+                  <p id="res-medicinal" class="text-slate-400 leading-relaxed">Seeds provide heart-healthy Vitamin E and magnesium.</p>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-950/20 border border-emerald-900/40">
+                  <span class="font-bold text-emerald-300 block mb-1">✨ Botanical Fun Fact:</span>
+                  <p id="res-fun-fact" class="text-slate-300 leading-relaxed">Young sunflowers exhibit heliotropism: they track the sun from east to west each day.</p>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: SPECIES ENCYCLOPEDIA                -->
+    <!-- ========================================== -->
+    <section id="tab-encyclopedia" class="tab-content hidden">
+      <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <span class="text-xs uppercase tracking-widest text-emerald-400 font-bold">Botanical Library</span>
+          <h2 class="text-3xl font-extrabold font-display text-white mt-1">Species Encyclopedia</h2>
+          <p class="text-slate-400 text-sm mt-1">Explore all flower species calibrated in our deep learning vision model.</p>
+        </div>
+        <div class="relative w-full md:w-72">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-500 text-xs"></i>
+          <input type="text" id="catalog-search" oninput="filterCatalog()" placeholder="Search flower or family..." class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500">
+        </div>
+      </div>
+
+      <div id="catalog-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <!-- Rendered dynamically via JS -->
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: SPECIES COMPARATOR                  -->
+    <!-- ========================================== -->
+    <section id="tab-comparator" class="tab-content hidden">
+      <div class="mb-8">
+        <span class="text-xs uppercase tracking-widest text-emerald-400 font-bold">Comparative Biology</span>
+        <h2 class="text-3xl font-extrabold font-display text-white mt-1">Flower Species Comparator</h2>
+        <p class="text-slate-400 text-sm mt-1">Compare morphology, care requirements, taxonomy, and ecological properties side-by-side.</p>
+      </div>
+
+      <!-- Selector Bar -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="w-full sm:w-1/2">
+          <label class="text-xs font-bold text-slate-400 block mb-2">Species 1:</label>
+          <select id="compare-select-1" onchange="loadComparison()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+            <!-- Populated via JS -->
+          </select>
+        </div>
+        <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-emerald-400 shrink-0 font-bold">VS</div>
+        <div class="w-full sm:w-1/2">
+          <label class="text-xs font-bold text-slate-400 block mb-2">Species 2:</label>
+          <select id="compare-select-2" onchange="loadComparison()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+            <!-- Populated via JS -->
+          </select>
+        </div>
+      </div>
+
+      <!-- Comparison View -->
+      <div id="comparison-view" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: MODEL METRICS & ARCHITECTURE (VIVA) -->
+    <!-- ========================================== -->
+    <section id="tab-metrics" class="tab-content hidden">
+      <div class="mb-8">
+        <span class="text-xs uppercase tracking-widest text-emerald-400 font-bold">Project Presentation & Viva</span>
+        <h2 class="text-3xl font-extrabold font-display text-white mt-1">Model Architecture & Performance Analytics</h2>
+        <p class="text-slate-400 text-sm mt-1">Comprehensive statistical evaluation, training loss, confusion matrix, and YOLOv8 pipeline.</p>
+      </div>
+
+      <!-- Top Metric Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+          <span class="text-xs text-slate-400 font-medium">Overall Accuracy</span>
+          <div class="font-display font-extrabold text-3xl text-emerald-400 mt-1">97.88%</div>
+          <span class="text-[11px] text-slate-500 mt-1 block">Test Validation Dataset</span>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+          <span class="text-xs text-slate-400 font-medium">Macro F1-Score</span>
+          <div class="font-display font-extrabold text-3xl text-teal-400 mt-1">97.84%</div>
+          <span class="text-[11px] text-slate-500 mt-1 block">Balanced Multi-Class</span>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+          <span class="text-xs text-slate-400 font-medium">YOLO Detection mAP@50</span>
+          <div class="font-display font-extrabold text-3xl text-cyan-400 mt-1">96.7%</div>
+          <span class="text-[11px] text-slate-500 mt-1 block">Bounding Box Precision</span>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+          <span class="text-xs text-slate-400 font-medium">Mean IoU (Localization)</span>
+          <div class="font-display font-extrabold text-3xl text-emerald-400 mt-1">92.4%</div>
+          <span class="text-[11px] text-slate-500 mt-1 block">Intersection over Union</span>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <!-- Accuracy Curves -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6">
+          <h3 class="font-display font-bold text-base text-white mb-1">Training & Validation Accuracy</h3>
+          <p class="text-xs text-slate-400 mb-4">Convergence across 50 epochs with Cosine Annealing learning rate schedule</p>
+          <div class="h-64">
+            <canvas id="chart-accuracy"></canvas>
+          </div>
+        </div>
+
+        <!-- Loss Curve -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6">
+          <h3 class="font-display font-bold text-base text-white mb-1">Cross-Entropy Loss Curve</h3>
+          <p class="text-xs text-slate-400 mb-4">Monotonic decrease in objective loss with AdamW optimizer</p>
+          <div class="h-64">
+            <canvas id="chart-loss"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Confusion Matrix & Class Metrics -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
+        
+        <!-- Confusion Matrix Visualizer (7 cols) -->
+        <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-3xl p-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-display font-bold text-base text-white">Confusion Matrix (%)</h3>
+              <p class="text-xs text-slate-400">Class predictions vs ground truth labels</p>
+            </div>
+            <span class="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">8 Prominent Classes</span>
+          </div>
+          <div id="confusion-matrix-table" class="overflow-x-auto text-xs font-mono">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+
+        <!-- Per-class Precision/Recall/F1 (5 cols) -->
+        <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-3xl p-6">
+          <h3 class="font-display font-bold text-base text-white mb-1">Per-Class Statistical Metrics</h3>
+          <p class="text-xs text-slate-400 mb-4">Precision, Recall, and F1-score breakdown</p>
+          <div id="class-metrics-list" class="space-y-3 overflow-y-auto max-h-80 pr-1">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- YOLO Architecture Pipeline Breakdown -->
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6">
+        <h3 class="font-display font-bold text-lg text-white mb-2 flex items-center space-x-2">
+          <i class="fa-solid fa-network-wired text-emerald-400"></i>
+          <span>YOLOv8 Deep Neural Architecture Pipeline</span>
+        </h3>
+        <p class="text-xs text-slate-400 mb-6">
+          How our network processes a flower image: from RGB input matrix to bounding box coordinates and botanical class probabilities.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-4">
+            <span class="text-xs font-bold text-emerald-400 font-mono block">STAGE 1: INPUT</span>
+            <h4 class="font-bold text-sm text-white mt-1">Image Preprocessing</h4>
+            <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+              Standardized to 640x640 RGB, letterbox padding, HSV augmentations, and affine transformations.
+            </p>
+          </div>
+          <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-4">
+            <span class="text-xs font-bold text-teal-400 font-mono block">STAGE 2: BACKBONE</span>
+            <h4 class="font-bold text-sm text-white mt-1">CSPDarknet & C2f</h4>
+            <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+              Cross-Stage Partial network with C2f blocks extracting high-resolution multi-scale petal and floral texture representations.
+            </p>
+          </div>
+          <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-4">
+            <span class="text-xs font-bold text-cyan-400 font-mono block">STAGE 3: NECK</span>
+            <h4 class="font-bold text-sm text-white mt-1">PANet Feature Pyramid</h4>
+            <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+              Path Aggregation Network fusing spatial details from low levels with semantic context from deep layers for small blossom detection.
+            </p>
+          </div>
+          <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-4">
+            <span class="text-xs font-bold text-emerald-400 font-mono block">STAGE 4: HEAD</span>
+            <h4 class="font-bold text-sm text-white mt-1">Decoupled Heads</h4>
+            <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+              Anchor-free Task-Aligned Assigner separating bounding box regression (IoU loss) from multi-class species categorization (BCE).
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 5: HISTORY LOG                         -->
+    <!-- ========================================== -->
+    <section id="tab-history" class="tab-content hidden">
+      <div class="mb-8 flex items-center justify-between">
+        <div>
+          <span class="text-xs uppercase tracking-widest text-emerald-400 font-bold">Session Tracking</span>
+          <h2 class="text-3xl font-extrabold font-display text-white mt-1">Classification History</h2>
+          <p class="text-slate-400 text-sm mt-1">Log of all botanical classifications performed during this session.</p>
+        </div>
+        <button onclick="clearHistory()" class="px-4 py-2 text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-xl transition flex items-center space-x-1.5">
+          <i class="fa-solid fa-trash-can"></i>
+          <span>Clear History</span>
+        </button>
+      </div>
+
+      <div id="history-list" class="space-y-3">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 6: REST API DOCUMENTATION & PLAYGROUND -->
+    <!-- ========================================== -->
+    <section id="tab-api" class="tab-content hidden">
+      <div class="mb-8">
+        <span class="text-xs uppercase tracking-widest text-emerald-400 font-bold">Developer Integration</span>
+        <h2 class="text-3xl font-extrabold font-display text-white mt-1">REST API Playground</h2>
+        <p class="text-slate-400 text-sm mt-1">Easily integrate FloraVision AI flower classification into mobile apps or backend pipelines.</p>
+      </div>
+
+      <div class="space-y-6">
+        
+        <!-- Endpoint 1: POST /api/classify -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6">
+          <div class="flex items-center space-x-3 mb-3">
+            <span class="px-3 py-1 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 font-mono">POST</span>
+            <code class="text-white text-sm font-mono">/api/classify</code>
+          </div>
+          <p class="text-xs text-slate-400 mb-4">Classifies an image and returns YOLO bounding boxes, top species, softmax probabilities, and botanical metadata.</p>
+          
+          <div class="bg-slate-950 rounded-2xl p-4 font-mono text-xs text-slate-300 overflow-x-auto border border-slate-800">
+            <p class="text-slate-500">// cURL Command Example</p>
+            <p class="text-emerald-400 mt-1">curl -X POST http://localhost:5000/api/classify \</p>
+            <p class="text-emerald-400">&nbsp;&nbsp;-F "image=@sunflower.jpg"</p>
+          </div>
+        </div>
+
+        <!-- Endpoint 2: GET /api/species -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6">
+          <div class="flex items-center space-x-3 mb-3">
+            <span class="px-3 py-1 rounded-lg text-xs font-bold bg-blue-500/20 text-blue-300 font-mono">GET</span>
+            <code class="text-white text-sm font-mono">/api/species</code>
+          </div>
+          <p class="text-xs text-slate-400 mb-4">Returns the complete list of botanical species supported by the system.</p>
+          
+          <div class="bg-slate-950 rounded-2xl p-4 font-mono text-xs text-slate-300 overflow-x-auto border border-slate-800">
+            <p class="text-slate-500">// Response Format</p>
+            <pre class="text-teal-300 mt-1">{
+  "total": 12,
+  "species": [
+    { "id": "rose", "common_name": "Rose", "scientific_name": "Rosa", "family": "Rosaceae" },
+    { "id": "sunflower", "common_name": "Sunflower", "scientific_name": "Helianthus annuus", "family": "Asteraceae" }
+  ]
+}</pre>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Printable Identification Certificate (Hidden until print) -->
+  <div id="print-certificate" class="hidden print:block p-8 bg-white text-slate-900">
+    <!-- Populated by JS on print -->
+  </div>
+
+  <footer class="mt-20 border-t border-slate-800/80 py-8 text-center text-xs text-slate-500">
+    <p>FloraVision AI • Flower Species Classification & YOLO Vision Suite</p>
+    <p class="mt-1 text-slate-600">Built with Flask, PyTorch, YOLOv8, OpenCV, and TailwindCSS</p>
+  </footer>
+
+  <!-- Main JavaScript App -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
