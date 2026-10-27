@@ -1,6 +1,6 @@
 # Flower Species Classification and Localization System: A Deep YOLOv8 Neural Architecture with Multi-Modal Preprocessing, Botanical Taxonomy, and Cloud-Native Flask Web Deployment
 
-**Sharan E. K.**  
+**Ashli N**  
 **Ms. Akshatha S**  
 Yenepoya Institute of Arts, Science, Commerce & Management  
 (A Constituent Unit of Yenepoya Deemed to be University),  
